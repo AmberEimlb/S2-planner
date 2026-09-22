@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School & Activity Planner</title>
+    <!-- FullCalendar CSS -->
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css' rel='stylesheet' />
+    <!-- SheetJS for reading Excel files -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- FullCalendar JS -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg-color: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            
+            /* Category Colors */
+            --cat-school-bg: #EEF2FF;
+            --cat-school-border: #6366F1;
+            --cat-school-text: #3730A3;
+
+            --cat-holiday-bg: #FEF3C7;
+            --cat-holiday-border: #F59E0B;
+            --cat-holiday-text: #92400E;
+
+            --cat-private-bg: #FCE7F3;
+            --cat-private-border: #EC4899;
+            --cat-private-text: #9D174D;
+
+            --cat-default-bg: #E2E8F0;
+            --cat-default-border: #94A3B8;
+            --cat-default-text: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+            background-color: var(--card-bg);
+            padding: 20px 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .title-area h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .title-area p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .actions-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .file-upload-btn {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-upload-btn input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .legend-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 6px 12px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot-school { background-color: var(--cat-school-border); }
+        .dot-holiday { background-color: var(--cat-holiday-border); }
+        .dot-private { background-color: var(--cat-private-border); }
+        .dot-default { background-color: var(--cat-default-border); }
+
+        .calendar-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .fc {
+            --fc-border-color: var(--border-color);
+            --fc-button-bg-color: var(--primary-color);
+            --fc-button-border-color: var(--primary-color);
+            --fc-button-hover-bg-color: var(--primary-hover);
+            --fc-button-hover-border-color: var(--primary-hover);
+            --fc-button-active-bg-color: var(--primary-hover);
+            --fc-button-active-border-color: var(--primary-hover);
+        }
+
+        .fc .fc-toolbar-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .fc .fc-button {
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: capitalize;
+        }
+
+        .fc-event {
+            border-radius: 6px !important;
+            padding: 2px 4px;
+            font-size: 0.8rem !important;
+            border-left-width: 4px !important;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        .fc-event:hover {
+            transform: scale(1.02);
+        }
+
+        .event-school {
+            background-color: var(--cat-school-bg) !important;
+            border-color: var(--cat-school-border) !important;
+            color: var(--cat-school-text) !important;
+        }
+
+        .event-holiday {
+            background-color: var(--cat-holiday-bg) !important;
+            border-color: var(--cat-holiday-border) !important;
+            color: var(--cat-holiday-text) !important;
+        }
+
+        .event-private {
+            background-color: var(--cat-private-bg) !important;
+            border-color: var(--cat-private-border) !important;
+            color: var(--cat-private-text) !important;
+        }
+
+        .event-default {
+            background-color: var(--cat-default-bg) !important;
+            border-color: var(--cat-default-border) !important;
+            color: var(--cat-default-text) !important;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .modal-body {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .modal-field {
+            margin-bottom: 12px;
+        }
+
+        .modal-field strong {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 640px) {
+            body { padding: 10px; }
+            header { flex-direction: column; align-items: flex-start; }
+            .fc-toolbar { flex-direction: column; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="title-area">
+                <h1>📅 Daughter's School & Activity Calendar</h1>
+                <p>Track homework, exams, holidays, and family plans in one place.</p>
+            </div>
+            <div class="actions-area">
+                <div class="file-upload-btn">
+                    <button class="btn btn-primary">📁 Load Excel File</button>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" />
+                </div>
+            </div>
+        </header>
+
+        <div class="legend-bar">
+            <div class="legend-item"><span class="legend-dot dot-school"></span> School & Homework</div>
+            <div class="legend-item"><span class="legend-dot dot-holiday"></span> Holidays / Vacations</div>
+            <div class="legend-item"><span class="legend-dot dot-private"></span> Private & Appointments</div>
+            <div class="legend-item"><span class="legend-dot dot-default"></span> Other Tasks</div>
+        </div>
+
+        <div class="calendar-card">
+            <div id="calendar"></div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div class="modal-overlay" id="eventModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalSubject">Task Title</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <strong>Date</strong>
+                    <span id="modalDate">-</span>
+                </div>
+                <div class="modal-field">
+                    <strong>Category / Subject</strong>
+                    <span id="modalCategory">-</span>
+                </div>
+                <div class="modal-field">
+                    <strong>Task / Details</strong>
+                    <span id="modalTask">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let calendar;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const calendarEl = document.getElementById('calendar');
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,listMonth'
+                },
+                editable: false,
+                selectable: true,
+                events: [],
+                eventClick: function(info) {
+                    showModal(info.event);
+                }
+            });
+
+            calendar.render();
+
+            // Try loading automatic 'tasks.xlsx' if present in repository
+            fetch('tasks.xlsx')
+                .then(response => {
+                    if (response.ok) return response.arrayBuffer();
+                    throw new Error('No local tasks.xlsx found');
+                })
+                .then(data => parseAndLoadExcel(data))
+                .catch(err => console.log('Notice: Upload an Excel file or place "tasks.xlsx" in repository directory.'));
+        });
+
+        // File input handler
+        document.getElementById('excelFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                parseAndLoadExcel(data);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function parseAndLoadExcel(data) {
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellNF: false });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // Convert to JSON with raw values to safely handle dates
+            const rawData = XLSX.utils.sheet_to_json(worksheet, { raw: true });
+
+            const events = [];
+
+            rawData.forEach((row, index) => {
+                const keys = Object.keys(row);
+                if (keys.length === 0) return;
+
+                // Robust column matching
+                const subjectKey = keys.find(k => /subject|category|title|topic/i.test(k)) || keys[0];
+                const dateKey = keys.find(k => /date|due|when|time/i.test(k)) || keys[1];
+                const taskKey = keys.find(k => /task|detail|description|event|notes/i.test(k)) || keys[2];
+
+                const subject = row[subjectKey] ? String(row[subjectKey]).trim() : 'Task';
+                const dateVal = row[dateKey];
+                const task = row[taskKey] ? String(row[taskKey]).trim() : '';
+
+                if (!dateVal) return;
+
+                const formattedDate = formatDateString(dateVal);
+
+                if (formattedDate) {
+                    const categoryClass = getCategoryClass(subject);
+
+                    events.push({
+                        id: String(index),
+                        title: task ? `${subject}: ${task}` : subject,
+                        start: formattedDate,
+                        allDay: true,
+                        className: categoryClass,
+                        extendedProps: {
+                            subject: subject,
+                            task: task,
+                            rawDate: formattedDate
+                        }
+                    });
+                }
+            });
+
+            // Update FullCalendar
+            calendar.removeAllEvents();
+            calendar.addEventSource(events);
+        }
+
+        function getCategoryClass(subject) {
+            const lower = subject.toLowerCase();
+            if (lower.includes('holiday') || lower.includes('vacation') || lower.includes('break')) {
+                return 'event-holiday';
+            } else if (lower.includes('private') || lower.includes('appointment') || lower.includes('birthday') || lower.includes('doctor')) {
+                return 'event-private';
+            } else if (lower.includes('math') || lower.includes('science') || lower.includes('english') || lower.includes('school') || lower.includes('history') || lower.includes('french') || lower.includes('german') || lower.includes('homework') || lower.includes('exam') || lower.includes('test')) {
+                return 'event-school';
+            }
+            return 'event-default';
+        }
+
+        function formatDateString(val) {
+            if (!val) return null;
+
+            // Handle JS Date objects
+            if (val instanceof Date) {
+                if (isNaN(val.getTime())) return null;
+                const year = val.getFullYear();
+                const month = String(val.getMonth() + 1).padStart(2, '0');
+                const day = String(val.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // Handle Excel Serial Numbers (e.g., 45231)
+            if (typeof val === 'number') {
+                const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+                const year = date.getUTCFullYear();
+                const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(date.getUTCDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            const strVal = String(val).trim();
+
+            // Extract date part from ISO string (2026-09-22T00:00:00)
+            if (strVal.includes('T')) {
+                return strVal.split('T')[0];
+            }
+
+            // Handle standard date strings like DD/MM/YYYY or YYYY-MM-DD
+            const parts = strVal.split(/[-/.]/);
+            if (parts.length === 3) {
+                // Year last (DD-MM-YYYY or MM-DD-YYYY)
+                if (parts[2].length === 4) {
+                    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+                // Year first (YYYY-MM-DD)
+                if (parts[0].length === 4) {
+                    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                }
+            }
+
+            return strVal;
+        }
+
+        function showModal(event) {
+            document.getElementById('modalSubject').textContent = event.extendedProps.subject || event.title;
+            document.getElementById('modalDate').textContent = event.extendedProps.rawDate;
+            document.getElementById('modalCategory').textContent = event.extendedProps.subject;
+            document.getElementById('modalTask').textContent = event.extendedProps.task || 'No additional details provided.';
+            
+            document.getElementById('eventModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('eventModal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
